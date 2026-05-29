@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 
 export async function GET() {
   const clientKey = process.env.TIKTOK_CLIENT_KEY!
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/tiktok/callback`
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL!.replace(/\/$/, '')
+  const redirectUri = `${baseUrl}/api/auth/tiktok/callback`
   const scope = 'user.info.basic,video.upload,video.publish'
   const state = crypto.randomUUID()
 
