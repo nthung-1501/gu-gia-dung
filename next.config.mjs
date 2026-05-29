@@ -5,9 +5,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['bullmq', 'postgres'],
-  },
+  serverExternalPackages: ['bullmq', 'ioredis', 'postgres'],
 }
 
 export default nextConfig
