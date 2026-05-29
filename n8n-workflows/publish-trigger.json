@@ -1,0 +1,107 @@
+{
+  "name": "GGD - Trigger Publish Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 0 * * *" },
+            { "field": "cronExpression", "expression": "0 5 * * *" },
+            { "field": "cronExpression", "expression": "0 12 * * *" },
+            { "field": "cronExpression", "expression": "0 12 * * 6" },
+            { "field": "cronExpression", "expression": "0 12 * * 0" },
+            { "field": "cronExpression", "expression": "0 13 * * *" },
+            { "field": "cronExpression", "expression": "0 14 * * *" }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000001",
+      "name": "Peak Hours (UTC) — 7h/12h/19h/20h/21h VN",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "notes": "UTC times: 00=07h VN, 05=12h VN, 12=19h VN, 13=20h VN, 14=21h VN. Thứ 7/CN thêm 12h=19h cho peak cuối tuần"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_URL }}/api/publish",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000002",
+      "name": "Get Scheduled Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst items = $input.first().json.publishJobs || [];\nconst due = items.filter(j => {\n  if (j.status !== 'scheduled') return false;\n  const scheduledAt = new Date(j.scheduledAt);\n  const diff = now - scheduledAt;\n  // within 30-minute window after scheduled time\n  return diff >= 0 && diff < 30 * 60 * 1000;\n});\nreturn due.map(j => ({ json: j }));"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000003",
+      "name": "Filter Due For Publishing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "check-items",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000004",
+      "name": "Has Due Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logging only — actual publish is handled by BullMQ publish worker\n// This workflow just surfaces which jobs are due, so you can inspect in n8n executions\nreturn $input.all().map(item => ({\n  json: {\n    message: `Due for publish: ${item.json.id}`,\n    publishJobId: item.json.id,\n    scheduledAt: item.json.scheduledAt,\n  }\n}));"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000005",
+      "name": "Log Due Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 220]
+    }
+  ],
+  "connections": {
+    "Peak Hours (UTC) — 7h/12h/19h/20h/21h VN": {
+      "main": [
+        [{ "node": "Get Scheduled Jobs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Scheduled Jobs": {
+      "main": [
+        [{ "node": "Filter Due For Publishing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Due For Publishing": {
+      "main": [
+        [{ "node": "Has Due Jobs?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Due Jobs?": {
+      "main": [
+        [{ "node": "Log Due Jobs", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "notes": "Chạy tại các giờ peak TikTok VN. Filter các publish job đến hạn (trong vòng 30 phút). Việc gửi lên TikTok do BullMQ publish worker xử lý — workflow này chủ yếu để monitor. Sau khi có TikTok access token, BullMQ worker sẽ tự handle."
+  }
+}

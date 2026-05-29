@@ -1,0 +1,86 @@
+{
+  "name": "GGD - Analytics Daily Collect",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Every day 9am VN (2am UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_URL }}/api/publish",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Get All Publish Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.publishJobs || [];\nreturn items\n  .filter(j => j.status === 'published' && j.tiktokPostId)\n  .map(j => ({ json: j }));"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Filter Published With TikTok ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_URL }}/api/analytics",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "publishJobId", "value": "={{ $json.id }}" },
+            { "name": "tiktokPostId", "value": "={{ $json.tiktokPostId }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Collect Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Every day 9am VN (2am UTC)": {
+      "main": [
+        [{ "node": "Get All Publish Jobs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get All Publish Jobs": {
+      "main": [
+        [{ "node": "Filter Published With TikTok ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Published With TikTok ID": {
+      "main": [
+        [{ "node": "Collect Metrics", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "notes": "Chạy mỗi ngày 9h sáng giờ VN. Lấy tất cả publish job đã đăng và có tiktokPostId, gọi API để snapshot metrics. Cần set env APP_URL = URL của Vercel app."
+  }
+}
