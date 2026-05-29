@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { ClientBoundary } from './client-boundary'
 import { count } from 'drizzle-orm'
 import { Package, FileText, Calendar, TrendingUp } from 'lucide-react'
 import { db } from '@/lib/db'
@@ -42,6 +43,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <ClientBoundary />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
         <p className="text-muted-foreground mt-1">Chào mừng đến với Gu Gia Dụng AI Dashboard</p>
