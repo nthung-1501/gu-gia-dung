@@ -8,14 +8,15 @@ import { collectMetrics } from '@/modules/analytics/metrics-collector'
 import { renderWithCreatomate } from '@/modules/production/video-pipeline'
 import type { ProductionJobData, PublishJobData, AnalyticsJobData } from '@/lib/queue/jobs'
 
-const redisUrl = new URL(process.env.REDIS_URL!)
+const rawRedisUrl = process.env.REDIS_URL!
+const redisMatch = rawRedisUrl.match(/^rediss?:\/\/(?:[^:]+):([^@]+)@([^:]+):(\d+)/)!
 const connection = {
-  host: redisUrl.hostname,
-  port: parseInt(redisUrl.port) || 6379,
-  password: decodeURIComponent(redisUrl.password),
-  tls: process.env.REDIS_URL!.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
+  host: redisMatch[2],
+  port: parseInt(redisMatch[3], 10),
+  password: redisMatch[1],
+  tls: rawRedisUrl.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
   enableReadyCheck: false,
-  maxRetriesPerRequest: null,
+  maxRetriesPerRequest: null as null,
 }
 
 // Production worker: poll TopView → on done, trigger Creatomate render

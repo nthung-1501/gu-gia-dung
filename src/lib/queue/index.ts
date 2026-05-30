@@ -3,17 +3,23 @@ import { Queue } from 'bullmq'
 function createConnection() {
   const redisUrl = process.env.REDIS_URL
   if (!redisUrl) {
-    // During Next.js build phase, return a placeholder — queues won't actually connect
-    return { host: 'localhost', port: 6379, enableReadyCheck: false, maxRetriesPerRequest: null }
+    return { host: 'localhost', port: 6379, enableReadyCheck: false, maxRetriesPerRequest: null as null }
   }
-  const url = new URL(redisUrl)
+
+  // Parse rediss://user:password@host:port manually — avoids new URL() issues with non-standard protocols
+  const match = redisUrl.match(/^rediss?:\/\/(?:[^:]+):([^@]+)@([^:]+):(\d+)/)
+  if (!match) {
+    return { host: 'localhost', port: 6379, enableReadyCheck: false, maxRetriesPerRequest: null as null }
+  }
+
+  const [, password, host, port] = match
   return {
-    host: url.hostname,
-    port: parseInt(url.port) || 6379,
-    password: decodeURIComponent(url.password),
+    host,
+    port: parseInt(port, 10),
+    password,
     tls: redisUrl.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
     enableReadyCheck: false,
-    maxRetriesPerRequest: null,
+    maxRetriesPerRequest: null as null,
   }
 }
 
