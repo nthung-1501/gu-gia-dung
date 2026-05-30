@@ -35,11 +35,16 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
 
 export const creatomateClient = {
   async render(params: RenderParams): Promise<RenderJob[]> {
+    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/creatomate`
+      : null
+
     return request<RenderJob[]>('/renders', {
       method: 'POST',
       body: JSON.stringify({
         template_id: params.templateId,
         modifications: params.modifications,
+        ...(webhookUrl ? { webhook_url: webhookUrl } : {}),
       }),
     })
   },
