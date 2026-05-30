@@ -8,7 +8,15 @@ import { collectMetrics } from '@/modules/analytics/metrics-collector'
 import { renderWithCreatomate } from '@/modules/production/video-pipeline'
 import type { ProductionJobData, PublishJobData, AnalyticsJobData } from '@/lib/queue/jobs'
 
-const connection = { url: process.env.REDIS_URL! }
+const redisUrl = new URL(process.env.REDIS_URL!)
+const connection = {
+  host: redisUrl.hostname,
+  port: parseInt(redisUrl.port) || 6379,
+  password: decodeURIComponent(redisUrl.password),
+  tls: process.env.REDIS_URL!.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
+  enableReadyCheck: false,
+  maxRetriesPerRequest: null,
+}
 
 // Production worker: poll TopView → on done, trigger Creatomate render
 const productionWorker = new Worker<ProductionJobData>(
