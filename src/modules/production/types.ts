@@ -20,8 +20,8 @@ export type GeneratedScript = {
 export type VideoPipelineInput = {
   videoId: string
   scriptId: string
-  scriptText: string
   series: string
   productName: string
   hook: string
+  productImageUrl: string
 }

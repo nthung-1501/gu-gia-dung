@@ -1,6 +1,4 @@
-import { topviewClient } from '@/lib/topview/client'
 import { creatomateClient } from '@/lib/creatomate/client'
-import { productionQueue } from '@/lib/queue'
 import type { VideoPipelineInput } from './types'
 
 export function buildScriptText(hook: string, body: string, cta: string, shotNotes?: string): string {
@@ -16,32 +14,24 @@ const CREATOMATE_TEMPLATES: Record<string, string> = {
 }
 
 type PipelineResult = {
-  topviewJobId: string
-  creatomateJobId?: string
+  creatomateJobId: string
   status: 'submitted' | 'failed'
   error?: string
 }
 
 export async function startVideoPipeline(input: VideoPipelineInput): Promise<PipelineResult> {
   try {
-    const topviewJob = await topviewClient.createVideo({
-      scriptText: input.scriptText,
-      aspectRatio: '9:16',
+    const { jobId } = await renderWithCreatomate({
+      productImageUrl: input.productImageUrl,
+      series: input.series,
+      productName: input.productName,
+      hook: input.hook,
     })
 
-    await productionQueue.add(
-      'poll-topview',
-      { videoId: input.videoId, scriptId: input.scriptId },
-      { delay: 30_000, attempts: 20, backoff: { type: 'fixed', delay: 30_000 } }
-    )
-
-    return {
-      topviewJobId: topviewJob.jobId,
-      status: 'submitted',
-    }
+    return { creatomateJobId: jobId, status: 'submitted' }
   } catch (err) {
     return {
-      topviewJobId: '',
+      creatomateJobId: '',
       status: 'failed',
       error: err instanceof Error ? err.message : 'Unknown error',
     }
@@ -49,7 +39,7 @@ export async function startVideoPipeline(input: VideoPipelineInput): Promise<Pip
 }
 
 export async function renderWithCreatomate(params: {
-  rawVideoUrl: string
+  productImageUrl: string
   series: string
   productName: string
   hook: string
@@ -60,7 +50,7 @@ export async function renderWithCreatomate(params: {
   const jobs = await creatomateClient.render({
     templateId,
     modifications: {
-      'video-source': params.rawVideoUrl,
+      'Video-FP8': params.productImageUrl,
       'hook-text': params.hook,
       'product-name': params.productName,
     },

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { scripts, videos, products } from '@/lib/db/schema'
 import { generateScript } from '@/modules/production/script-generator'
-import { startVideoPipeline, buildScriptText } from '@/modules/production/video-pipeline'
+import { startVideoPipeline } from '@/modules/production/video-pipeline'
 
 const ALL_SERIES = ['test-that', 'house-30s', 'which-one-better'] as const
 type Series = typeof ALL_SERIES[number]
@@ -15,7 +15,7 @@ const Schema = z.object({
 
 async function produceOneSeries(
   series: Series,
-  product: { id: string; name: string; briefJson: NonNullable<{ keyFeatures: string[]; painPoints: string[]; suggestedHooks?: string[] }> }
+  product: { id: string; name: string; imageUrls: string[]; briefJson: NonNullable<{ keyFeatures: string[]; painPoints: string[]; suggestedHooks?: string[] }> }
 ) {
   const generatedScript = await generateScript({
     productId: product.id,
@@ -42,20 +42,20 @@ async function produceOneSeries(
     status: 'pending',
   }).returning()
 
-  const scriptText = buildScriptText(script.hook, script.body, script.cta, script.shotNotes ?? undefined)
+  const productImageUrl = (product.imageUrls as string[])?.[0] ?? ''
 
   const pipelineResult = await startVideoPipeline({
     videoId: video.id,
     scriptId: script.id,
-    scriptText,
     series,
     productName: product.name,
     hook: script.hook,
+    productImageUrl,
   })
 
   const [updatedVideo] = await db.update(videos)
     .set({
-      topviewJobId: pipelineResult.topviewJobId || null,
+      creatomateJobId: pipelineResult.creatomateJobId || null,
       status: pipelineResult.status === 'submitted' ? 'rendering' : 'failed',
       errorMessage: pipelineResult.error ?? null,
       updatedAt: new Date(),
@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
     const productData = {
       id: product.id,
       name: product.name,
+      imageUrls: (product.imageUrls as string[]) ?? [],
       briefJson: product.briefJson,
     }
 

@@ -1,12 +1,10 @@
 import { Worker } from 'bullmq'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { videos, publishJobs } from '@/lib/db/schema'
-import { topviewClient } from '@/lib/topview/client'
+import { publishJobs } from '@/lib/db/schema'
 import { tiktokClient } from '@/lib/tiktok/client'
 import { collectMetrics } from '@/modules/analytics/metrics-collector'
-import { renderWithCreatomate } from '@/modules/production/video-pipeline'
-import type { ProductionJobData, PublishJobData, AnalyticsJobData } from '@/lib/queue/jobs'
+import type { PublishJobData, AnalyticsJobData } from '@/lib/queue/jobs'
 
 const rawRedisUrl = process.env.REDIS_URL!
 const redisMatch = rawRedisUrl.match(/^rediss?:\/\/(?:[^:]+):([^@]+)@([^:]+):(\d+)/)!
@@ -19,55 +17,6 @@ const connection = {
   maxRetriesPerRequest: null as null,
 }
 
-// Production worker: poll TopView → on done, trigger Creatomate render
-const productionWorker = new Worker<ProductionJobData>(
-  'production',
-  async (job) => {
-    const { videoId } = job.data
-
-    const video = await db.query.videos.findFirst({
-      where: eq(videos.id, videoId),
-      with: {
-        script: {
-          with: { product: true },
-        },
-      },
-    })
-
-    if (!video?.topviewJobId) {
-      throw new Error(`No video/topviewJobId found for videoId ${videoId}`)
-    }
-
-    const topviewJob = await topviewClient.getJob(video.topviewJobId)
-
-    if (topviewJob.status === 'completed' && topviewJob.videoUrl) {
-      const { jobId: creatomateJobId } = await renderWithCreatomate({
-        rawVideoUrl: topviewJob.videoUrl,
-        series: video.script.series,
-        productName: video.script.product.name,
-        hook: video.script.hook,
-      })
-
-      await db.update(videos)
-        .set({ creatomateJobId, updatedAt: new Date() })
-        .where(eq(videos.id, video.id))
-      // Creatomate will call /api/webhooks/creatomate when render completes
-    } else if (topviewJob.status === 'failed') {
-      await db.update(videos)
-        .set({
-          status: 'failed',
-          errorMessage: topviewJob.errorMessage ?? 'TopView job failed',
-          updatedAt: new Date(),
-        })
-        .where(eq(videos.id, video.id))
-    } else {
-      // still processing — throw to trigger BullMQ retry with backoff
-      throw new Error('TopView job still processing')
-    }
-  },
-  { connection }
-)
-
 // Publish worker: post video to TikTok and update publishJob status
 const publishWorker = new Worker<PublishJobData>(
   'publish',
@@ -76,9 +25,7 @@ const publishWorker = new Worker<PublishJobData>(
 
     const publishJob = await db.query.publishJobs.findFirst({
       where: eq(publishJobs.id, publishJobId),
-      with: {
-        video: true,
-      },
+      with: { video: true },
     })
 
     if (!publishJob) throw new Error(`PublishJob ${publishJobId} not found`)
@@ -111,22 +58,12 @@ const analyticsWorker = new Worker<AnalyticsJobData>(
   { connection }
 )
 
-productionWorker.on('failed', (job, err) => {
-  if (job) {
-    console.error(`[production] job ${job.id} failed:`, err.message)
-  }
-})
-
 publishWorker.on('failed', (job, err) => {
-  if (job) {
-    console.error(`[publish] job ${job.id} failed:`, err.message)
-  }
+  if (job) console.error(`[publish] job ${job.id} failed:`, err.message)
 })
 
 analyticsWorker.on('failed', (job, err) => {
-  if (job) {
-    console.error(`[analytics] job ${job.id} failed:`, err.message)
-  }
+  if (job) console.error(`[analytics] job ${job.id} failed:`, err.message)
 })
 
-console.log('Workers started: production, publish, analytics')
+console.log('Workers started: publish, analytics')

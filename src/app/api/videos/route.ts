@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { videos, scripts, products } from '@/lib/db/schema'
-import { startVideoPipeline, buildScriptText } from '@/modules/production/video-pipeline'
+import { startVideoPipeline } from '@/modules/production/video-pipeline'
 
 const CreateVideoSchema = z.object({
   scriptId: z.string().uuid(),
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const scriptText = buildScriptText(script.hook, script.body, script.cta, script.shotNotes ?? undefined)
+    const productImageUrl = (script.product.imageUrls as string[])?.[0] ?? ''
 
     const [video] = await db.insert(videos).values({
       scriptId: input.scriptId,
@@ -40,16 +40,16 @@ export async function POST(req: NextRequest) {
     const pipelineResult = await startVideoPipeline({
       videoId: video.id,
       scriptId: input.scriptId,
-      scriptText,
       series: script.series,
       productName: script.product.name,
       hook: script.hook,
+      productImageUrl,
     })
 
     const [updated] = await db
       .update(videos)
       .set({
-        topviewJobId: pipelineResult.topviewJobId || null,
+        creatomateJobId: pipelineResult.creatomateJobId || null,
         status: pipelineResult.status === 'submitted' ? 'rendering' : 'failed',
         errorMessage: pipelineResult.error ?? null,
         updatedAt: new Date(),
