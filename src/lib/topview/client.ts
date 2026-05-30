@@ -46,7 +46,9 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
     throw new Error(`TopView API error ${res.status}: ${body}`)
   }
 
-  return res.json() as Promise<T>
+  const json = await res.json()
+  console.log('[TopView] raw response:', JSON.stringify(json))
+  return json as T
 }
 
 export const topviewClient = {
