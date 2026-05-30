@@ -26,7 +26,7 @@ function getAuthHeaders() {
   if (!apiKey) throw new Error('TOPVIEW_API_KEY is not configured')
   if (!uid) throw new Error('TOPVIEW_UID is not configured')
   return {
-    'Authorization': clean(apiKey),
+    'Authorization': `Bearer ${clean(apiKey)}`,
     'Topview-Uid': clean(uid),
   }
 }
