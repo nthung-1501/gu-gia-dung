@@ -8,15 +8,21 @@ type CreateVideoParams = {
   aspectRatio?: '9:16' | '16:9' | '1:1'
 }
 
-type TopViewJob = {
+export type TopViewJob = {
   jobId: string
   status: TopViewJobStatus
   videoUrl?: string
   errorMessage?: string
 }
 
+// TopView wraps all responses in { code, message, result }
+type TopViewResponse<T> = {
+  code: string
+  message: string
+  result: T | null
+}
+
 function clean(value: string): string {
-  // Strip BOM (U+FEFF) and surrounding whitespace
   return value.replace(/^﻿/, '').trim()
 }
 
@@ -41,19 +47,45 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
     },
   })
 
+  const json = await res.json() as TopViewResponse<T>
+  console.log('[TopView] raw response:', JSON.stringify(json))
+
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`TopView API error ${res.status}: ${body}`)
+    throw new Error(`TopView API error ${res.status}: ${json.message ?? res.statusText}`)
   }
 
-  const json = await res.json()
-  console.log('[TopView] raw response:', JSON.stringify(json))
-  return json as T
+  if (json.code !== '0' && json.code !== '200') {
+    throw new Error(`TopView API error code ${json.code}: ${json.message}`)
+  }
+
+  if (!json.result) {
+    throw new Error(`TopView API returned null result: ${json.message}`)
+  }
+
+  return json.result
+}
+
+// TopView actual response shape for video creation
+type TopViewCreateResult = {
+  video_id?: string
+  videoId?: string
+  job_id?: string
+  jobId?: string
+  id?: string
+  status?: string
+}
+
+function normalizeJob(raw: TopViewCreateResult, fallbackId?: string): TopViewJob {
+  const id = raw.video_id ?? raw.videoId ?? raw.job_id ?? raw.jobId ?? raw.id ?? fallbackId ?? ''
+  return {
+    jobId: id,
+    status: (raw.status as TopViewJobStatus) ?? 'pending',
+  }
 }
 
 export const topviewClient = {
   async createVideo(params: CreateVideoParams): Promise<TopViewJob> {
-    return request<TopViewJob>('/videos', {
+    const raw = await request<TopViewCreateResult>('/videos', {
       method: 'POST',
       body: JSON.stringify({
         script: params.scriptText,
@@ -61,9 +93,11 @@ export const topviewClient = {
         aspect_ratio: params.aspectRatio ?? '9:16',
       }),
     })
+    return normalizeJob(raw)
   },
 
   async getJob(jobId: string): Promise<TopViewJob> {
-    return request<TopViewJob>(`/videos/${jobId}`, { method: 'GET' })
+    const raw = await request<TopViewCreateResult>(`/videos/${jobId}`, { method: 'GET' })
+    return normalizeJob(raw, jobId)
   },
 }
