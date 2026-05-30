@@ -85,12 +85,14 @@ function normalizeJob(raw: TopViewCreateResult, fallbackId?: string): TopViewJob
 
 export const topviewClient = {
   async createVideo(params: CreateVideoParams): Promise<TopViewJob> {
+    // Send only script — omit voice_id/aspect_ratio to diagnose 5000 errors
+    // Strip VISUAL DIRECTION section (for TopView only — keep script concise)
+    const scriptForTopView = params.scriptText.split('\n\n--- VISUAL DIRECTION ---')[0].trim()
+    console.log('[TopView] script length:', scriptForTopView.length, 'chars')
     const raw = await request<TopViewCreateResult>('/videos', {
       method: 'POST',
       body: JSON.stringify({
-        script: params.scriptText,
-        voice_id: params.voiceId ?? 'vi-female-1',
-        aspect_ratio: params.aspectRatio ?? '9:16',
+        script: scriptForTopView,
       }),
     })
     return normalizeJob(raw)
