@@ -14,6 +14,7 @@ export type GeneratedScript = {
   cta: string
   estimatedDuration: number
   series: 'test-that' | 'house-30s' | 'which-one-better'
+  shotNotes: string
 }
 
 export type VideoPipelineInput = {

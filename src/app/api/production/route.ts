@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       hook: generatedScript.hook,
       body: generatedScript.body,
       cta: generatedScript.cta,
+      shotNotes: generatedScript.shotNotes,
       estimatedDuration: generatedScript.estimatedDuration,
       status: 'draft',
     }).returning()

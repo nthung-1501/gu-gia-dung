@@ -15,6 +15,7 @@ type CommentResponseScript = {
   body: string
   cta: string
   estimatedDuration: number
+  shotNotes: string
 }
 
 const SYSTEM_PROMPT = `Bạn là scriptwriter TikTok cho kênh "Gu Gia Dụng" — chia sẻ trải nghiệm đồ gia dụng.
@@ -25,12 +26,17 @@ Phong cách:
 - Nhắc tên người comment tự nhiên ngay đầu video, không gượng gạo
 - Mở rộng góc nhìn từ câu hỏi — đừng chỉ trả lời thẳng, hãy chia sẻ thêm điều audience chưa nghĩ tới
 
-Series:
-- "test-that": test thực tế, kết quả thật, so với quảng cáo (~60s)
-- "house-30s": tip nhanh, thực dụng, dễ làm theo (~30s)
-- "which-one-better": so sánh lựa chọn, ai nên chọn cái nào (~90s)
+Visual style (KHÔNG lộ mặt):
+- Chỉ có tay cầm/thao tác sản phẩm, không quay mặt người
+- Camera tập trung vào sản phẩm đang hoạt động, chi tiết bề mặt, kết quả thực tế
+- Góc quay: overhead, close-up chi tiết, side view khi thao tác
 
-Chọn series phù hợp nhất với nội dung comment. Nếu comment hỏi về cách dùng → house-30s. Nếu hỏi có đáng mua không → test-that. Nếu hỏi so sánh → which-one-better.`
+Series và shot style:
+- "test-that": Tay cầm → Close-up chi tiết → Dùng thực tế → Kết quả trước/sau (~60s)
+- "house-30s": Close-up sản phẩm → Tay thao tác nhanh → Kết quả ngay (~30s)
+- "which-one-better": 2 sản phẩm cạnh nhau → Tay chỉ điểm khác biệt → Test song song (~90s)
+
+Chọn series phù hợp: hỏi cách dùng → house-30s | hỏi đáng mua không → test-that | hỏi so sánh → which-one-better.`
 
 export async function generateCommentResponse(input: CommentResponseInput): Promise<CommentResponseScript> {
   const userMessage = `Có người comment vào video "${input.originalHook}" về sản phẩm "${input.productName}":
@@ -54,7 +60,8 @@ Output JSON:
   "hook": "câu mở đầu 3 giây tạo tò mò hoặc nêu vấn đề",
   "body": "nội dung chính, viết liền mạch như thoại tự nhiên",
   "cta": "kêu gọi hành động ngắn, không ép buộc",
-  "estimatedDuration": số giây ước tính
+  "estimatedDuration": số giây ước tính,
+  "shotNotes": "mô tả từng cảnh quay theo thứ tự: [Cảnh 1] ... [Cảnh 2] ... — chỉ tay và sản phẩm, không mặt người"
 }`
 
   return generateJSON<CommentResponseScript>(SYSTEM_PROMPT, userMessage, { maxTokens: 1024 })

@@ -61,6 +61,7 @@ export const scripts = pgTable('scripts', {
   hook: text('hook').notNull(),
   body: text('body').notNull(),
   cta: text('cta').notNull(),
+  shotNotes: text('shot_notes'),
   estimatedDuration: integer('estimated_duration'),
   status: scriptStatusEnum('status').default('draft').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

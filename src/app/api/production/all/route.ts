@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { scripts, videos, products } from '@/lib/db/schema'
 import { generateScript } from '@/modules/production/script-generator'
-import { startVideoPipeline } from '@/modules/production/video-pipeline'
+import { startVideoPipeline, buildScriptText } from '@/modules/production/video-pipeline'
 
 const ALL_SERIES = ['test-that', 'house-30s', 'which-one-better'] as const
 type Series = typeof ALL_SERIES[number]
@@ -32,6 +32,7 @@ async function produceOneSeries(
     hook: generatedScript.hook,
     body: generatedScript.body,
     cta: generatedScript.cta,
+    shotNotes: generatedScript.shotNotes,
     estimatedDuration: generatedScript.estimatedDuration,
     status: 'approved',
   }).returning()
@@ -41,7 +42,7 @@ async function produceOneSeries(
     status: 'pending',
   }).returning()
 
-  const scriptText = `${script.hook}\n\n${script.body}\n\n${script.cta}`
+  const scriptText = buildScriptText(script.hook, script.body, script.cta, script.shotNotes ?? undefined)
 
   const pipelineResult = await startVideoPipeline({
     videoId: video.id,

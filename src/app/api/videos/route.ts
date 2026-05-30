@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { videos, scripts, products } from '@/lib/db/schema'
-import { startVideoPipeline } from '@/modules/production/video-pipeline'
+import { startVideoPipeline, buildScriptText } from '@/modules/production/video-pipeline'
 
 const CreateVideoSchema = z.object({
   scriptId: z.string().uuid(),
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const scriptText = `${script.hook}\n\n${script.body}\n\n${script.cta}`
+    const scriptText = buildScriptText(script.hook, script.body, script.cta, script.shotNotes ?? undefined)
 
     const [video] = await db.insert(videos).values({
       scriptId: input.scriptId,

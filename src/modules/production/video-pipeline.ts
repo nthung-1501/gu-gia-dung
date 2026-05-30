@@ -3,6 +3,12 @@ import { creatomateClient } from '@/lib/creatomate/client'
 import { productionQueue } from '@/lib/queue'
 import type { VideoPipelineInput } from './types'
 
+export function buildScriptText(hook: string, body: string, cta: string, shotNotes?: string): string {
+  const base = `${hook}\n\n${body}\n\n${cta}`
+  if (!shotNotes) return base
+  return `${base}\n\n--- VISUAL DIRECTION ---\n${shotNotes}`
+}
+
 const CREATOMATE_TEMPLATES: Record<string, string> = {
   'test-that': process.env.CREATOMATE_TEMPLATE_TEST_THAT ?? '',
   'house-30s': process.env.CREATOMATE_TEMPLATE_HOUSE_30S ?? '',

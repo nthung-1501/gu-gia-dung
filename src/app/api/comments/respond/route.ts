@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { scripts, videos, commentTriggers, publishJobs } from '@/lib/db/schema'
 import { generateCommentResponse } from '@/modules/production/comment-response-generator'
-import { startVideoPipeline } from '@/modules/production/video-pipeline'
+import { startVideoPipeline, buildScriptText } from '@/modules/production/video-pipeline'
 
 const Schema = z.object({
   tiktokPostId: z.string().min(1),
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       hook: generated.hook,
       body: generated.body,
       cta: generated.cta,
+      shotNotes: generated.shotNotes,
       estimatedDuration: generated.estimatedDuration,
       status: 'approved',
     }).returning()
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     }).returning()
 
-    const scriptText = `${script.hook}\n\n${script.body}\n\n${script.cta}`
+    const scriptText = buildScriptText(script.hook, script.body, script.cta, script.shotNotes ?? undefined)
 
     const pipelineResult = await startVideoPipeline({
       videoId: video.id,
