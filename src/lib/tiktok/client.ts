@@ -4,6 +4,20 @@ type TikTokPost = {
   publish_id: string
 }
 
+export type TikTokComment = {
+  id: string
+  text: string
+  display_name: string
+  create_time: number
+}
+
+type TikTokCommentsResponse = {
+  comments: TikTokComment[]
+  cursor: number
+  has_more: boolean
+  total_count: number
+}
+
 type TikTokApiResponse<T> = {
   data: T
   error: {
@@ -87,6 +101,14 @@ export const tiktokClient = {
         },
       }),
     })
+  },
+
+  async getComments(videoId: string): Promise<TikTokComment[]> {
+    const data = await request<TikTokCommentsResponse>(
+      `/video/comment/list/?fields=id,text,display_name,create_time&video_id=${videoId}&max_count=20&cursor=0`,
+      { method: 'GET' }
+    )
+    return data.comments ?? []
   },
 
   async getVideoMetrics(postId: string): Promise<TikTokMetrics> {

@@ -117,6 +117,20 @@ export const analyticsSnapshots = pgTable('analytics_snapshots', {
   postIdx: index('analytics_tiktok_post_id_idx').on(t.tiktokPostId),
 }))
 
+export const commentTriggers = pgTable('comment_triggers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tiktokPostId: text('tiktok_post_id').notNull(),
+  tiktokCommentId: text('tiktok_comment_id').notNull().unique(),
+  commenterUsername: text('commenter_username').notNull(),
+  commentText: text('comment_text').notNull(),
+  responseScriptId: uuid('response_script_id').references(() => scripts.id),
+  responseVideoId: uuid('response_video_id').references(() => videos.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  commentIdIdx: index('comment_triggers_comment_id_idx').on(t.tiktokCommentId),
+  postIdx: index('comment_triggers_post_id_idx').on(t.tiktokPostId),
+}))
+
 // Relations
 export const productsRelations = relations(products, ({ many }) => ({
   scripts: many(scripts),
@@ -140,6 +154,11 @@ export const analyticsSnapshotsRelations = relations(analyticsSnapshots, ({ one 
   publishJob: one(publishJobs, { fields: [analyticsSnapshots.publishJobId], references: [publishJobs.id] }),
 }))
 
+export const commentTriggersRelations = relations(commentTriggers, ({ one }) => ({
+  responseScript: one(scripts, { fields: [commentTriggers.responseScriptId], references: [scripts.id] }),
+  responseVideo: one(videos, { fields: [commentTriggers.responseVideoId], references: [videos.id] }),
+}))
+
 export type Product = typeof products.$inferSelect
 export type NewProduct = typeof products.$inferInsert
 export type Script = typeof scripts.$inferSelect
@@ -150,3 +169,5 @@ export type PublishJob = typeof publishJobs.$inferSelect
 export type NewPublishJob = typeof publishJobs.$inferInsert
 export type AnalyticsSnapshot = typeof analyticsSnapshots.$inferSelect
 export type NewAnalyticsSnapshot = typeof analyticsSnapshots.$inferInsert
+export type CommentTrigger = typeof commentTriggers.$inferSelect
+export type NewCommentTrigger = typeof commentTriggers.$inferInsert

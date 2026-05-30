@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Package, FileText, Calendar, BarChart2, Home, Video,
+  Package, FileText, Calendar, BarChart2, Home, Video, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/products', label: 'Sản phẩm', icon: Package },
   { href: '/scripts', label: 'Kịch bản', icon: FileText },
   { href: '/videos', label: 'Video', icon: Video },
+  { href: '/comments', label: 'Comment → Video', icon: MessageCircle },
   { href: '/schedule', label: 'Lịch đăng', icon: Calendar },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
 ]
