@@ -15,11 +15,22 @@ type TopViewJob = {
   errorMessage?: string
 }
 
+function getAuthHeaders() {
+  const apiKey = process.env.TOPVIEW_API_KEY
+  const uid = process.env.TOPVIEW_UID
+  if (!apiKey) throw new Error('TOPVIEW_API_KEY is not configured')
+  if (!uid) throw new Error('TOPVIEW_UID is not configured')
+  return {
+    'Authorization': apiKey,
+    'Topview-Uid': uid,
+  }
+}
+
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      'Authorization': `Bearer ${process.env.TOPVIEW_API_KEY}`,
+      ...getAuthHeaders(),
       'Content-Type': 'application/json',
       ...options.headers,
     },
