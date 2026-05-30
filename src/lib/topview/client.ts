@@ -15,14 +15,19 @@ type TopViewJob = {
   errorMessage?: string
 }
 
+function clean(value: string): string {
+  // Strip BOM (U+FEFF) and surrounding whitespace
+  return value.replace(/^﻿/, '').trim()
+}
+
 function getAuthHeaders() {
   const apiKey = process.env.TOPVIEW_API_KEY
   const uid = process.env.TOPVIEW_UID
   if (!apiKey) throw new Error('TOPVIEW_API_KEY is not configured')
   if (!uid) throw new Error('TOPVIEW_UID is not configured')
   return {
-    'Authorization': apiKey,
-    'Topview-Uid': uid,
+    'Authorization': clean(apiKey),
+    'Topview-Uid': clean(uid),
   }
 }
 
